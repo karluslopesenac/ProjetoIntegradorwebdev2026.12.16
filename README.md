@@ -29,3 +29,9 @@ espaço privilegiado para imprimir as Marcas Formativas Senac:
 – criatividade e atitude empreendedora;
 
 – visão crítica;
+
+– atitude sustentável;
+
+– colaboração e comunicação;
+
+– autonomia digital.
