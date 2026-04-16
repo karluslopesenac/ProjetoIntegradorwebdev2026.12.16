@@ -1,7 +1,7 @@
-# ProjetoIntegradorwebdev2026.12.16
+# Sites temáticos como ferramenta de marketing e engajamento
 Repositório do Projeto Integrador da turma de Desenvolvedor Web 2026.12.16 - SENAC Sobral
 <!--
-A partir daqui, os alunos devem contribuir com a descrição da problematização e do desenvolvimento do projeto, am cada uma d e suas fases
+A partir daqui, os alunos devem contribuir com a descrição da problematização e do desenvolvimento do projeto.
 -->
 INTEGRANTES:
 - Danilo Mesquita
