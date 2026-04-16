@@ -2,61 +2,76 @@
 session_start();
 include 'config.php';
 
-if (isset($_GET['logout']) && $_GET['logout'] == 1) {
-    session_unset();
-    session_destroy();
-    // Opcional: remover cookies de login aqui
-    header("Location: admin.php"); // Redireciona para o login
+if (!isset($_SESSION['user_id']) || $_SESSION['user_nivel'] !== 'admin') {
+    header("Location: login.php?erro=acesso_negado");
     exit;
 }
 
-// Login Admin Simples
-if (!isset($_SESSION['admin']) && !isset($_POST['senha'])) {
-    ?>
-    <!DOCTYPE html><html><body>
-    <form method="POST">
-        <h2>Admin Login</h2>
-        <input type="password" name="senha" placeholder="Senha Admin" required>
-        <button type="submit">Entrar</button>
-    </form></body></html>
-    <?php exit;
+if (isset($_GET['logout']) && $_GET['logout'] == 1) {
+    // session_unset();
+    session_destroy();
+    // Opcional: remover cookies de login aqui
+    header("Location: index.php"); // Redireciona para o login
+    exit;
+}
+if (isset($_POST['acao_user']) && isset($_SESSION['user_nivel']) && $_SESSION['user_nivel'] === 'admin') {
+    $user_id = (int)($_POST['user_id'] ?? 0);
+
+    if ($_POST['acao_user'] === 'tornar_admin') {
+        mysqli_query($conn, "UPDATE usuarios SET nivel = 'admin' WHERE id = $user_id");
+    } elseif ($_POST['acao_user'] === 'revogar_admin') {
+        mysqli_query($conn, "UPDATE usuarios SET nivel = 'user' WHERE id = $user_id");
+    }
 }
 
-if (isset($_POST['senha']) && $_POST['senha'] === 'admin123') {
-    $_SESSION['admin'] = true;
-} elseif (!isset($_SESSION['admin'])) {
-    die('Acesso negado!');
-}
-// GERENCIAMENTO USUÁRIOS
-if (isset($_POST['acao_user']) && isset($_SESSION['admin_id'])) {
+// Login Admin Simples
+// if (!isset($_SESSION['admin']) && !isset($_POST['senha'])) {
+//     
+ //     <!DOCTYPE html><html><body>
+//     <form method="POST">
+//         <h2>Admin Login</h2>
+//         <input type="password" name="senha" placeholder="Senha Admin" required>
+//         <button type="submit">Entrar</button>
+//     </form></body></html>
+//     -->
+// 
+
+// if (isset($_POST['senha']) && $_POST['senha'] === 'admin123') {
+//     $_SESSION['admin'] = true;
+// } elseif (!isset($_SESSION['admin'])) {
+//     die('Acesso negado!');
+// }
+// // GERENCIAMENTO USUÁRIOS
+if (isset($_POST['acao_user']) && isset($_SESSION['user_nivel']) && $_SESSION['user_nivel'] === 'admin') {
     $user_id = (int)$_POST['user_id'];
-    $admin_id = $_SESSION['admin_id'];
+    $user_nivel = $_SESSION['user_nivel'];
     $ip = $_SERVER['REMOTE_ADDR'];
     
     switch ($_POST['acao_user']) {
         case 'ativar':
             mysqli_query($conn, "UPDATE usuarios SET ativo = 1 WHERE id = $user_id");
-            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, admin_id, acao, detalhes, ip) VALUES ($user_id, $admin_id, 'ativado', 'Admin reativou conta', '$ip')");
+            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'ativado', 'Admin reativou conta', '$ip')");
             break;
             
         case 'inativar':
             mysqli_query($conn, "UPDATE usuarios SET ativo = 0 WHERE id = $user_id");
-            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, admin_id, acao, detalhes, ip) VALUES ($user_id, $admin_id, 'banido', 'Admin baniu conta', '$ip')");
+            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'banido', 'Admin baniu conta', '$ip')");
             break;
             
         case 'reset_senha':
             $nova_senha = password_hash('123456', PASSWORD_DEFAULT);
             mysqli_query($conn, "UPDATE usuarios SET senha = '$nova_senha' WHERE id = $user_id");
-            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, admin_id, acao, detalhes, ip) VALUES ($user_id, $admin_id, 'reset_senha', 'Senha resetada para 123456', '$ip')");
+            echo "<script>alert('Senha do usuário ID $user_id resetada para 123456');</script>";
+            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'reset_senha', 'Senha resetada para 123456', '$ip')");
             break;
     }
     header('Location: admin.php#usuarios');
     exit;
 }
 // EXCLUSÃO DE USUÁRIOS
-if (isset($_POST['deletar_usuario']) && isset($_SESSION['admin_id'])) {
+if (isset($_POST['deletar_usuario']) && isset($_SESSION['user_nivel']) && $_SESSION['user_nivel'] === 'admin') {
     $user_id = (int)$_POST['user_id'];
-    $admin_id = $_SESSION['admin_id'];
+    $user_nivel = $_SESSION['user_nivel'];
     $confirmado = $_POST['confirmar'] ?? 0;
     
     if (!$confirmado) {
@@ -73,7 +88,7 @@ if (isset($_POST['deletar_usuario']) && isset($_SESSION['admin_id'])) {
     
     // Log da exclusão
     $ip = $_SERVER['REMOTE_ADDR'];
-    mysqli_query($conn, "INSERT INTO usuario_logs (user_id, admin_id, acao, detalhes, ip) VALUES ($user_id, $admin_id, 'excluido', 'Excluído por admin. Pedidos: $pedidos_count', '$ip')");
+    mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'excluido', 'Excluído por admin. Pedidos: $pedidos_count', '$ip')");
     
     // Deleta CASCAATA: pedidos → itens → usuário
     mysqli_query($conn, "DELETE ip FROM itens_pedido ip JOIN pedidos p ON ip.pedido_id = p.id WHERE p.user_id = $user_id");
@@ -131,6 +146,7 @@ if (isset($_POST['acao'])) {
             unlink("img/" . $produto['imagem']);
             mysqli_query($conn, "DELETE FROM produtos WHERE id=$id");
             break;
+            
     }
 }
 
