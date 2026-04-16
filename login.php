@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $senha = $_POST['senha'];
     
-    $query = "SELECT id, nome, email, senha FROM usuarios WHERE email = '$email'";
+    $query = "SELECT id, nome, email, senha, nivel FROM usuarios WHERE email = '$email'";
     $result = mysqli_query($conn, $query);
     
     if ($user = mysqli_fetch_assoc($result)) {
@@ -20,7 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_nome'] = $user['nome'];
             $_SESSION['user_email'] = $user['email'];
-            header('Location: index.php');
+            $_SESSION['user_nivel'] = $user['nivel'];
+            
+            
+                header('Location: index.php');
+                
             exit;
         } else {
             $erro = 'Senha incorreta!';
