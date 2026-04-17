@@ -47,15 +47,19 @@ if (isset($_POST['acao_user']) && isset($_SESSION['user_nivel']) && $_SESSION['u
     $user_nivel = $_SESSION['user_nivel'];
     $ip = $_SERVER['REMOTE_ADDR'];
     
-    switch ($_POST['acao_user']) {
+    switch ($_POST['acao']) {
         case 'ativar':
             mysqli_query($conn, "UPDATE usuarios SET ativo = 1 WHERE id = $user_id");
-            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'ativado', 'Admin reativou conta', '$ip')");
+
+            $sql_log = "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'ativado', 'Admin reativou conta', '$ip')";
+            // mysqli_query($conn, $sql_log) or die (mysqli_error($conn));
+            
             break;
             
         case 'inativar':
             mysqli_query($conn, "UPDATE usuarios SET ativo = 0 WHERE id = $user_id");
-            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'banido', 'Admin baniu conta', '$ip')");
+            $sql_log = "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'banido', 'Admin baniu conta', '$ip')";
+            
             break;
             
         case 'reset_senha':
@@ -65,7 +69,7 @@ if (isset($_POST['acao_user']) && isset($_SESSION['user_nivel']) && $_SESSION['u
             mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'reset_senha', 'Senha resetada para 123456', '$ip')");
             break;
     }
-    header('Location: admin.php#usuarios');
+    // header('Location: admin.php#usuarios');
     exit;
 }
 // EXCLUSÃO DE USUÁRIOS
@@ -81,6 +85,10 @@ if (isset($_POST['deletar_usuario']) && isset($_SESSION['user_nivel']) && $_SESS
         header('Location: admin.php#confirm_del_user');
         exit;
     }
+    if (isset($_POST['deletar_usuario'])) {
+    $pedido_id = (int)$_POST['deletar_pedido'];
+    mysqli_query($conn, "DELETE FROM itens_pedido WHERE pedido_id = $pedido_id");
+    mysqli_query($conn, "DELETE FROM pedidos WHERE id = $pedido_id");
     
     // Backup dados antes de deletar
     $user = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM usuarios WHERE id = $user_id"));
@@ -359,7 +367,7 @@ $ultimos_pedidos = mysqli_query($conn, "SELECT * FROM pedidos ORDER BY data DESC
                         <div class="d-flex flex-wrap gap-2 justify-content-center">
                             <!-- Ativar/Banir -->
                             <form method="POST" style="display:inline;">
-                                <input type="hidden" name="acao_user" value="<?=$user['ativo'] ? 'inativar' : 'ativar'?>">
+                                <input type="hidden" name="acao" value="<?=$user['ativo'] ? 'inativar' : 'ativar'?>">
                                 <input type="hidden" name="user_id" value="<?=$user['id']?>">
                                 <button class="btn btn-<?=($user['ativo'] ? 'dark' : 'success')?> btn-sm rounded" style="padding:3px 8px; font-size:12px;">
                                     <?=($user['ativo'] ? '<i class="fa-solid fa-x" style="font-size:12px;"></i> Banir' : '<i class="fa-solid fa-check"></i> Ativar')?>
