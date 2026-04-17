@@ -47,9 +47,11 @@ $total = 0;
         <li class="nav-item">
           <h3><a class="nav-link active" aria-current="page" href="index.php">Produtos</a></h3>
         </li>
-        <li class="nav-item">
-          <h3><a class="nav-link" href="login.php">Login</a></h3>
-        </li>
+        <?php if(isset($_SESSION['user_id'])): ?>
+            <li class="nav-item"><a class="nav-link active" href="logout.php" class="btn-sair"><h3>Sair</h3></a></li>
+        <?php else: ?>
+            <li class="nav-item"><a class="nav-link active" aria-current="page" href="login.php"><h3>Login</h3></a></li>
+        <?php endif; ?>
       </ul>
 </div>
 </nav>
