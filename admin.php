@@ -47,29 +47,25 @@ if (isset($_POST['acao_user']) && isset($_SESSION['user_nivel']) && $_SESSION['u
     $user_nivel = $_SESSION['user_nivel'];
     $ip = $_SERVER['REMOTE_ADDR'];
     
-    switch ($_POST['acao']) {
+    switch ($_POST['acao_user']) {
         case 'ativar':
             mysqli_query($conn, "UPDATE usuarios SET ativo = 1 WHERE id = $user_id");
-
-            $sql_log = "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'ativado', 'Admin reativou conta', '$ip')";
-            // mysqli_query($conn, $sql_log) or die (mysqli_error($conn));
-            
+            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ('$user_id', '$user_nivel', 'ativado', 'Admin reativou conta', '$ip')");
             break;
             
         case 'inativar':
             mysqli_query($conn, "UPDATE usuarios SET ativo = 0 WHERE id = $user_id");
-            $sql_log = "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'banido', 'Admin baniu conta', '$ip')";
-            
+            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ('$user_id', '$user_nivel', 'banido', 'Admin baniu conta', '$ip')");
             break;
             
         case 'reset_senha':
             $nova_senha = password_hash('123456', PASSWORD_DEFAULT);
             mysqli_query($conn, "UPDATE usuarios SET senha = '$nova_senha' WHERE id = $user_id");
             echo "<script>alert('Senha do usuário ID $user_id resetada para 123456');</script>";
-            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'reset_senha', 'Senha resetada para 123456', '$ip')");
+            mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ('$user_id', '$user_nivel', 'reset_senha', 'Senha resetada para 123456', '$ip')");
             break;
     }
-    // header('Location: admin.php#usuarios');
+    header('Location: admin.php#usuarios');
     exit;
 }
 // EXCLUSÃO DE USUÁRIOS
@@ -77,18 +73,23 @@ if (isset($_POST['deletar_usuario']) && isset($_SESSION['user_nivel']) && $_SESS
     $user_id = (int)$_POST['user_id'];
     $user_nivel = $_SESSION['user_nivel'];
     $confirmado = $_POST['confirmar'] ?? 0;
+
+    if (isset($_POST['deletar_usuario']) && isset($_SESSION['user_nivel']) && $_SESSION['user_nivel'] === 'admin') {
+    $user_id = (int)$_POST['deletar_usuario'];
+    mysqli_query($conn, "DELETE FROM usuarios WHERE id = $user_id");
+    mysqli_query($conn, "DELETE FROM pedidos WHERE user_id = $user_id");
+    header('Location: admin.php#usuarios');
+    exit;
     
+}
     if (!$confirmado) {
         // Mostra confirmação
         $_SESSION['confirm_del_user'] = $user_id;
         $_SESSION['confirm_del_msg'] = "Confirmar exclusão do usuário ID $user_id? Todos pedidos serão excluídos.";
         header('Location: admin.php#confirm_del_user');
         exit;
-    }
-    if (isset($_POST['deletar_usuario'])) {
-    $pedido_id = (int)$_POST['deletar_pedido'];
-    mysqli_query($conn, "DELETE FROM itens_pedido WHERE pedido_id = $pedido_id");
-    mysqli_query($conn, "DELETE FROM pedidos WHERE id = $pedido_id");
+}
+    
     
     // Backup dados antes de deletar
     $user = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM usuarios WHERE id = $user_id"));
@@ -96,7 +97,7 @@ if (isset($_POST['deletar_usuario']) && isset($_SESSION['user_nivel']) && $_SESS
     
     // Log da exclusão
     $ip = $_SERVER['REMOTE_ADDR'];
-    mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ($user_id, $user_nivel, 'excluido', 'Excluído por admin. Pedidos: $pedidos_count', '$ip')");
+    mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ('$user_id', '$user_nivel', 'excluido', 'Excluído por admin. Pedidos: $pedidos_count', '$ip')");
     
     // Deleta CASCAATA: pedidos → itens → usuário
     mysqli_query($conn, "DELETE ip FROM itens_pedido ip JOIN pedidos p ON ip.pedido_id = p.id WHERE p.user_id = $user_id");
@@ -138,7 +139,7 @@ if (isset($_POST['acao'])) {
             $imagem = $_FILES['imagem']['name'];
             $descricao = mysqli_real_escape_string($conn, $_POST['descricao']);
             if (move_uploaded_file($_FILES['imagem']['tmp_name'], "img/" . $imagem)) {
-                mysqli_query($conn, "INSERT INTO produtos (nome, preco, imagem, descricao) VALUES ('$nome', $preco, '$imagem', '$descricao')");
+                mysqli_query($conn, "INSERT INTO produtos (nome, preco, imagem, descricao) VALUES ('$nome', '$preco', '$imagem', '$descricao')");
             }
             break;
         case 'edit':
@@ -367,10 +368,10 @@ $ultimos_pedidos = mysqli_query($conn, "SELECT * FROM pedidos ORDER BY data DESC
                         <div class="d-flex flex-wrap gap-2 justify-content-center">
                             <!-- Ativar/Banir -->
                             <form method="POST" style="display:inline;">
-                                <input type="hidden" name="acao" value="<?=$user['ativo'] ? 'inativar' : 'ativar'?>">
+                                <input type="hidden" name="acao_user" value="<?=$user['ativo'] ? 'inativar' : 'ativar'?>">
                                 <input type="hidden" name="user_id" value="<?=$user['id']?>">
                                 <button class="btn btn-<?=($user['ativo'] ? 'dark' : 'success')?> btn-sm rounded" style="padding:3px 8px; font-size:12px;">
-                                    <?=($user['ativo'] ? '<i class="fa-solid fa-x" style="font-size:12px;"></i> Banir' : '<i class="fa-solid fa-check"></i> Ativar')?>
+                                    <?=($user['ativo'] ? '<i class="fa-solid fa-x" style="font-size:12px;"></i> inativar' : '<i class="fa-solid fa-check"></i> Ativar')?>
                                 </button>
                             </form>
                             
@@ -428,15 +429,8 @@ setTimeout(() => {
                     <option value="Cancelado" <?=($_GET['status']??'')=='Cancelado'?'selected':''?>>Cancelado</option>
                 </select>
             </div>
-            <style>
-                .btn-custoom {
-                    background-color: #ffa200;
-                    color: #fff;
-                    border: none;
-                }
-            </style>
 
-            <button class="btn btn-custoom" type="submit" style="padding:8px 15px;"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+            <button class="btn btn-warning" type="submit" style="padding:8px 15px;"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
             <a class="btn btn-success" href="export_pedidos.php" style="padding:8px 15px;"><i class="fa-solid fa-chart-simple"></i> Export CSV</a>
             <a class="btn btn-secondary" href="?reset=1" style="padding:8px 15px;" onclick="return confirm('Limpar filtros?')"><i class="fa-solid fa-recycle"></i> Limpar</a>
             <label style="margin-left: auto;"><input type="checkbox" id="selecionar-todos"> Selecionar Todos</label>
@@ -484,7 +478,7 @@ setTimeout(() => {
                         <input type="checkbox" name="pedidos[]" value="<?=$pedido['id']?>">
                     </div>
                     <div class="card-body">
-                        <h6 class="card-title"><?=htmlspecialchars($pedido['cliente_nome'] ?? 'Convidado')?></h6>
+                        <h6 class="card-title"><?=htmlspecialchars($pedido['nome_cliente'] ?? 'Convidado')?></h6>
                         <p class="card-text mb-1"><small class="text-muted"><?=htmlspecialchars($pedido['email'] ?? '')?></small></p>
                         <p class="card-text mb-1"><strong>Total: R$ <?=number_format($pedido['total'], 2)?></strong></p>
                         <p class="card-text mb-1">Itens: <?=$itens['qtd']?></p>
