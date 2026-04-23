@@ -2,7 +2,7 @@
 session_start();
 include 'config.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_nivel'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_nivel'], ['admin', 'adminP'])) {
     header("Location: login.php?erro=acesso_negado");
     exit;
 }
@@ -14,15 +14,9 @@ if (isset($_GET['logout']) && $_GET['logout'] == 1) {
     header("Location: index.php"); // Redireciona para o login
     exit;
 }
-if (isset($_POST['acao_user']) && isset($_SESSION['user_nivel']) && $_SESSION['user_nivel'] === 'admin') {
-    $user_id = (int)($_POST['user_id'] ?? 0);
 
-    if ($_POST['acao_user'] === 'tornar_admin') {
-        mysqli_query($conn, "UPDATE usuarios SET nivel = 'admin' WHERE id = $user_id");
-    } elseif ($_POST['acao_user'] === 'revogar_admin') {
-        mysqli_query($conn, "UPDATE usuarios SET nivel = 'user' WHERE id = $user_id");
-    }
-}
+
+
 
 // Login Admin Simples
 // if (!isset($_SESSION['admin']) && !isset($_POST['senha'])) {
@@ -65,7 +59,26 @@ if (isset($_POST['acao_user']) && isset($_SESSION['user_nivel']) && $_SESSION['u
             mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ('$user_id', '$user_nivel', 'reset_senha', 'Senha resetada para 123456', '$ip')");
             break;
     }
+    
     header('Location: admin.php#usuarios');
+    exit;
+}
+
+if (isset($_POST['acao_user'], $_SESSION['user_nivel']) && $_SESSION['user_nivel'] === 'admin') {
+    $user_id = (int)($_POST['user_id'] ?? 0);
+    $user_nivel_admin = $_SESSION['user_nivel'];
+    $acao = $_POST['acao_user'];
+    $ip = $_SERVER['REMOTE_ADDR']; // Definição do IP que faltava
+
+    if ($acao === 'tornar') {
+        mysqli_query($conn, "UPDATE usuarios SET nivel = 'admin' WHERE id = $user_id");
+        mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ('$user_id', '$user_nivel_admin', 'promovido', 'tornado admin', '$ip')");
+    } elseif ($acao === 'revogar') {
+        // CORREÇÃO: Adicionado aspas em 'user'
+        mysqli_query($conn, "UPDATE usuarios SET nivel = 'user' WHERE id = $user_id");
+        mysqli_query($conn, "INSERT INTO usuario_logs (user_id, user_nivel, acao, detalhes, ip) VALUES ('$user_id', '$user_nivel_admin', 'exonerado', 'revogação de admin', '$ip')");
+    }
+    header("Location: admin.php#usuarios");
     exit;
 }
 // EXCLUSÃO DE USUÁRIOS
@@ -74,7 +87,7 @@ if (isset($_POST['deletar_usuario']) && isset($_SESSION['user_nivel']) && $_SESS
     $user_nivel = $_SESSION['user_nivel'];
     $confirmado = $_POST['confirmar'] ?? 0;
 
-    if (isset($_POST['deletar_usuario']) && isset($_SESSION['user_nivel']) && $_SESSION['user_nivel'] === 'admin') {
+    if (isset($_POST['deletar_usuario']) && isset($_SESSION['user_nivel']) && $_SESSION['user_nivel'] === 'admin' ) {
     $user_id = (int)$_POST['deletar_usuario'];
     mysqli_query($conn, "DELETE FROM usuarios WHERE id = $user_id");
     mysqli_query($conn, "DELETE FROM pedidos WHERE user_id = $user_id");
@@ -381,13 +394,23 @@ $ultimos_pedidos = mysqli_query($conn, "SELECT * FROM pedidos ORDER BY data DESC
                                 <input type="hidden" name="user_id" value="<?=$user['id']?>">
                                 <button class="btn btn-warning btn-sm rounded" style="padding:3px 8px; font-size:12px;" onclick="return confirm('Resetar senha para 123456?')"><i class="fa-solid fa-key" style="font-size:12px;"></i> Reset</button>
                             </form>
-                            
+
+                            <!-- Tornar admin/Revogar admin -->
+  <!-- #region -->              <form method="POST" style="display:inline;">
+                                <input type="hidden" name="acao_user" value="<?=$user['nivel'] ? 'revogar' : 'tornar'?>">
+                                <input type="hidden" name="user_id" value="<?=  htmlspecialchars((int)$user['id']) ?>">
+                                <button class="btn btn-<?=($user['nivel'] ? 'dark' : 'success')?> btn-sm rounded" style="padding:3px 8px; font-size:12px;">
+                                    <?=($user['nivel'] ? '<i class="fa-solid fa-check"></i> tornar' : '<i class="fa-solid fa-x" style="font-size:12px;"></i> revogar')?>
+                                </button>
+                            </form>
+
                             <!-- Excluir -->
                             <form method="POST" style="display:inline;">
                                 <input type="hidden" name="deletar_usuario" value="<?=$user['id']?>">
                                 <input type="hidden" name="confirmar" value="0">
                                 <button class="btn btn-danger btn-sm rounded" type="submit" style="padding:3px 8px; font-size:12px;" onclick="return confirm('ATENÇÃO: Excluir usuário <?=$user['nome']?> (ID <?=$user['id']?>)?\nPedidos (<?=$user['pedidos']?>) serão PERDIDOS permanentemente!')"><i class="fa-solid fa-skull-crossbones"></i> Excluir</button>
                             </form>
+                            
                             
                             <!-- Detalhes -->
                             <a href="user_detalhes.php?id=<?=$user['id']?>" class="btn btn-primary btn-sm rounded" style="padding:3px 8px; font-size:12px;"><i class="fa-solid fa-eye" style="font-size:12px"></i> Ver</a>
