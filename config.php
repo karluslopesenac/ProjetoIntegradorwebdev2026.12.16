@@ -2,7 +2,7 @@
 $server = 'localhost';
 $user = 'root';
 $pass = '';
-$db = 'newage';
+$db = 'umbrella';
 $conn = mysqli_connect($server, $user, $pass, $db);
 if (!$conn) die('Erro conexão');
 ?>
