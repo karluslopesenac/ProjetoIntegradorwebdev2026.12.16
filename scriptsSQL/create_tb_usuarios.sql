@@ -4,6 +4,6 @@ CREATE TABLE usuarios (
     email VARCHAR(100) UNIQUE NOT NULL,
     senha VARCHAR(255) NOT NULL,
     ativo TINYINT(1) DEFAULT 1,
-    nivel ENUM('cliente', 'admin', 'adminP') DEFAULT 'cliente',
+    nivel ENUM('user', 'admin') DEFAULT 'user',
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
